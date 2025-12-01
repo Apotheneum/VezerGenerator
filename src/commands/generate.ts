@@ -29,85 +29,39 @@ export async function generateCommand(
     config: config.tracks[name],
   }));
 
-  // Display track info
-  choices.forEach((c) => {
+  // Display numbered track list
+  choices.forEach((c, i) => {
     const type = c.config.type === "daw"
       ? chalk.cyan(`[${c.config.daw}]`)
       : chalk.magenta("[vezer]");
-    console.log(`  ${type} ${c.name}`);
+    console.log(`  ${chalk.yellow(i + 1)}. ${type} ${c.name}`);
   });
   console.log();
 
-  // Step 1: Select tracks
-  const { selected } = await inquirer.prompt<{ selected: TrackChoice[] }>([
+  // Step 1: Enter track numbers (allows duplicates)
+  const { trackOrder } = await inquirer.prompt<{ trackOrder: string }>([
     {
-      type: "checkbox",
-      name: "selected",
-      message: "Select tracks to include:",
-      choices: choices.map((c) => ({
-        name: `${c.name} (${c.config.type})`,
-        value: c,
-        checked: false,
-      })),
-      validate: (answer) => {
-        if (answer.length === 0) {
-          return "You must select at least one track.";
+      type: "input",
+      name: "trackOrder",
+      message: "Enter track numbers in order (comma-separated, can repeat):",
+      validate: (input) => {
+        const nums = input.split(",").map((s: string) => parseInt(s.trim(), 10));
+        if (nums.length === 0 || nums.some(isNaN)) {
+          return "Please enter valid numbers.";
+        }
+        if (nums.some((n) => n < 1 || n > choices.length)) {
+          return `Please enter numbers between 1 and ${choices.length}.`;
         }
         return true;
       },
     },
   ]);
 
-  if (selected.length === 0) {
-    console.log(chalk.yellow("No tracks selected. Exiting."));
-    return;
-  }
+  const indices = trackOrder.split(",").map((s) => parseInt(s.trim(), 10) - 1);
+  const orderedTracks = indices.map((i) => choices[i]);
 
-  // Step 2: Reorder tracks
-  console.log(chalk.blue("\nCurrent order:"));
-  selected.forEach((c, i) => console.log(chalk.gray(`  ${i + 1}. ${c.name}`)));
-
-  const { reorder } = await inquirer.prompt<{ reorder: boolean }>([
-    {
-      type: "confirm",
-      name: "reorder",
-      message: "Would you like to reorder the tracks?",
-      default: false,
-    },
-  ]);
-
-  let orderedTracks = selected;
-
-  if (reorder) {
-    const { newOrder } = await inquirer.prompt<{ newOrder: string }>([
-      {
-        type: "input",
-        name: "newOrder",
-        message: "Enter the new order as comma-separated numbers (e.g., 3,1,2):",
-        validate: (input) => {
-          const nums = input.split(",").map((s: string) => parseInt(s.trim(), 10));
-          if (nums.some(isNaN)) {
-            return "Please enter valid numbers.";
-          }
-          if (nums.length !== selected.length) {
-            return `Please enter exactly ${selected.length} numbers.`;
-          }
-          const sorted = [...nums].sort((a, b) => a - b);
-          const expected = Array.from({ length: selected.length }, (_, i) => i + 1);
-          if (JSON.stringify(sorted) !== JSON.stringify(expected)) {
-            return `Please use each number from 1 to ${selected.length} exactly once.`;
-          }
-          return true;
-        },
-      },
-    ]);
-
-    const indices = newOrder.split(",").map((s) => parseInt(s.trim(), 10) - 1);
-    orderedTracks = indices.map((i) => selected[i]);
-
-    console.log(chalk.blue("\nNew order:"));
-    orderedTracks.forEach((c, i) => console.log(chalk.gray(`  ${i + 1}. ${c.name}`)));
-  }
+  console.log(chalk.blue("\nPlaylist order:"));
+  orderedTracks.forEach((c, i) => console.log(chalk.gray(`  ${i + 1}. ${c.name}`)));
 
   // Step 3: Set intro duration
   const { introDuration } = await inquirer.prompt<{ introDuration: number }>([
