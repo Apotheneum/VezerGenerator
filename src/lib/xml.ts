@@ -212,6 +212,16 @@ export async function buildVzrFile(
       if (dictStart !== -1) {
         const dictEnd = findMatchingDictClose(templateContent, dictStart + 6);
         appDataXml = templateContent.slice(dictStart, dictEnd);
+
+        // Enable loop at end of playlist and auto-play next composition
+        appDataXml = appDataXml.replace(
+          /(<key>queuedLoopButton<\/key>\s*<dict>[\s\S]*?<key>state<\/key>\s*)<(true|false)\/>/,
+          "$1<true/>"
+        );
+        appDataXml = appDataXml.replace(
+          /(<key>queuedModeButton<\/key>\s*<dict>[\s\S]*?<key>state<\/key>\s*)<(true|false)\/>/,
+          "$1<true/>"
+        );
       } else {
         appDataXml = "<dict/>";
       }

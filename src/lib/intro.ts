@@ -28,17 +28,24 @@ export function generateIntro(options: IntroOptions): string {
 
   // Build OSC flag keyframes for Chromatik
   const chromatikKeyframes: FlagKeyframe[] = [
+    // Quit both DAWs at start to ensure clean state
+    { time: 0, address: "/apotheneum/quitLive" },
+    { time: 1, address: "/apotheneum/quitBitwig" },
     // Open waiting room LX project at start
     {
-      time: 0,
+      time: 2,
       address: `/apotheneum/openProject <"${config.waitingRoomLxProject}">`,
     },
-    // Open track's LX project near the end (5 seconds before)
-    {
+  ];
+
+  // For DAW tracks, open LX project near end of intro
+  // For Vezér tracks, the main composition will open its own LX project
+  if (trackConfig.type === "daw") {
+    chromatikKeyframes.push({
       time: durationFrames - 5 * fps,
       address: `/apotheneum/openProject <"${trackConfig.lxProject}">`,
-    },
-  ];
+    });
+  }
 
   // Build tracks array
   const tracks: Track[] = [
