@@ -16,7 +16,7 @@ saying what you're unsure of over making a confident change to timing or OSC beh
 
 ## Conventions
 
-- **Runtime is `tsx`** — no build step. Run things with `npx tsx src/cli.ts <command>`.
+- **Runtime is `tsx`** — no build step. Run things with the pnpm scripts: `pnpm generate`, `pnpm extract`, `pnpm manage`.
 - **Imports carry `.ts` extensions** (`from "./lib/config.ts"`). That is deliberate and
   required by the ESM + `tsx` setup. Do not "fix" them to extensionless.
 - **`src/config.ts` is the source of truth for the track library**, hand-edited. No
@@ -56,6 +56,7 @@ each is a decision, not an oversight to fix silently:
 | Field | Status |
 |---|---|
 | `oscPorts`, `audioDevice` in `src/config.ts` | Unused. `buildAppData()` in `src/lib/xml.ts` would consume them, but nothing calls it while `generate` supplies a template path. |
+
 ## Verifying claims
 
 Nothing here is covered by tests, so verify against the artifacts directly rather than
@@ -66,7 +67,7 @@ reasoning from the config:
 grep -o '/apotheneum/[^<"]*' compositions/<name>.xml | sort | uniq -c
 
 # Generate a single track without the interactive prompts
-npx tsx src/test-generate.ts DO-Treetop
+pnpm test DO-Treetop
 ```
 
 When you state what a track does, say whether you read it from config or from the XML —
