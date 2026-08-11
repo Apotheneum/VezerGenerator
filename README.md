@@ -112,55 +112,18 @@ added and removed by hand.
 One composition covers both the waiting room and the piece. Total length is
 `introDuration + duration`.
 
-| Time | What happens |
-|---|---|
-| `0` | Quit both DAWs, open the waiting-room LX project, start waiting-room audio, fade master in over 5s |
-| `introEnd − openProjectAhead` | Open the DAW project (default 20s; per-track override) |
-| `+10s` after that | **Bitwig only** — defensive stop/restart burst. Ableton gets no preflight. |
-| `introEnd − 5s` | Fade master out |
-| `introEnd + 1s` | Open the track's `lxProject` |
-| `introEnd + 4s` | Press play on the DAW, master back to full |
-| `end − 5s` | Fade master out |
-| `end − 1s` | Stop transport, quit the DAW |
-
 Note that `openProjectAhead` counts backward from the **end of the intro**, not from
 playback — playback starts 4 seconds later, so the DAW actually gets
 `openProjectAhead + 4s` of loading time.
 
-Two worked examples, both with a 120s intro. Each is windowed on the last 30 seconds of
-the intro and the first seconds of the piece — that is where everything happens. The
-waiting room simply runs from 0:00 to that point, and the piece continues to the end of
-the composition.
+One worked example, with a 120s intro, windowed on the last 30 seconds of the intro and
+the first seconds of the piece — that is where everything happens. The waiting room simply
+runs from 0:00 to that point, and the piece continues to the end of the composition.
 
-**Ableton** — `MS-Apotheosis` (`duration: 2530`). No preflight: the project is opened and
-left alone until play.
+An Ableton track is the same shape with the preflight row removed: the project is opened,
+left alone while it loads, and started at the same moment.
 
-```mermaid
-gantt
-    title Ableton track - final 30s of the intro through the handoff
-    dateFormat HH:mm:ss
-    axisFormat %M:%S
-    section Audio
-    Waiting-room audio ends :done, a1, 00:01:30, 00:02:00
-    Piece plays            :active, a2, 00:02:04, 00:02:30
-    section Chromatik (LX)
-    WaitingRoom.BRC.lxp    :done, c1, 00:01:30, 00:02:00
-    Open track LX          :milestone, c2, 00:02:01, 0s
-    Apotheosis.BRC.lxp     :active, c3, 00:02:01, 00:02:30
-    section Ableton
-    Open project           :milestone, b1, 00:01:40, 0s
-    Loading                :crit, b2, 00:01:40, 00:02:04
-    Start                  :milestone, b3, 00:02:04, 0s
-    Playing                :active, b4, 00:02:04, 00:02:30
-    section Master fader
-    Full - intro           :done, m2, 00:01:30, 00:01:55
-    Fade out               :m3, 00:01:55, 00:02:00
-    Silent across the seam :crit, m4, 00:02:00, 00:02:04
-    Full - piece           :done, m5, 00:02:04, 00:02:30
-```
-
-**Bitwig** — `DO-Treetop` (`duration: 1200`). Identical shape plus the defensive reset
-burst 10s after the project opens.
+**Bitwig** — `DO-Treetop`. The preflight burst at 1:50 is the Bitwig-only part.
 
 ```mermaid
 gantt
