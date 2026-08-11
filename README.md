@@ -226,7 +226,10 @@ gantt
 ```
 
 The second bar's length comes from the XML, not from config — the generator never knows
-it. No DAW appears in either half, because no DAW is involved.
+it. To find a Vezér piece's real duration, read `compTime` (in seconds) out of the
+composition: `grep -A1 '<key>compTime</key>' compositions/MS-Generative.xml` gives `8325`,
+i.e. 2h19m. You need this to work out a show's total runtime, since `manage` and
+`generate` can't tell you. No DAW appears in either half, because no DAW is involved.
 
 The stored composition owns far more than its visuals — **it owns its own LX project,
 audio, transport, duration, and automation.** The generated intro therefore only opens the

@@ -40,4 +40,7 @@ async function main() {
   console.log(chalk.gray("Try opening this in Vezér to verify it works."));
 }
 
-main().catch(console.error);
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

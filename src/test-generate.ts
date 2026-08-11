@@ -60,4 +60,7 @@ async function main() {
   console.log(chalk.green(`\nSaved to: ${outputFile}`));
 }
 
-main().catch(console.error);
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
