@@ -55,12 +55,10 @@ const config: Config = {
     "JB-LulledFortitude": {
       type: "vezer",
       composition: "./compositions/JB-LulledFortitude.xml",
-      lxProject: "Apotheneum/mcslee/LulledFortitude.lxp",
     },
     "MS-Generative": {
       type: "vezer",
       composition: "./compositions/MS-Generative.xml",
-      lxProject: "Apotheneum/mcslee/Generative.lxp",
     },
   },
 };

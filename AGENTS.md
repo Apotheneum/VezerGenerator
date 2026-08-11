@@ -42,9 +42,9 @@ These have all bitten someone already.
 - **Timing constants are frame-based and interdependent.** `fps` is 30; durations in
   config are seconds and get multiplied. Changing one offset in `daw-track.ts` can
   reorder events relative to another. Read the whole timeline before touching one row.
-- **Don't trust `lxProject` on a `vezer` track** — it's required by the type but never
-  read, and the configured values have drifted from what the XML actually opens. Get the
-  real value from the composition:
+- **A `vezer` track's LX project lives only in its XML** — `VezerTrackConfig` has no
+  `lxProject` field, and the generated intro deliberately doesn't open one (the stored
+  composition opens its own on its own timeline). Get the real value from the composition:
   `grep -o 'openProject &lt;[^<]*' compositions/<name>.xml`
 
 ## Known dead config
@@ -55,8 +55,6 @@ each is a decision, not an oversight to fix silently:
 | Field | Status |
 |---|---|
 | `oscPorts`, `audioDevice` in `src/config.ts` | Unused. `buildAppData()` in `src/lib/xml.ts` would consume them, but nothing calls it while `generate` supplies a template path. |
-| `lxProject` on `VezerTrackConfig` | Required by the type, never read. Schema debt. |
-
 ## Verifying claims
 
 Nothing here is covered by tests, so verify against the artifacts directly rather than
