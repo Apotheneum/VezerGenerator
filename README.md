@@ -1,38 +1,19 @@
 # Vezér Playlist Generator
 
-A TypeScript CLI that generates Vezér (`.vzr`) playlists for the Apotheneum art
-installation — orchestrating DAW playback, Chromatik/LX lighting, audio, and the OSC
-messaging that ties them together.
+A TypeScript CLI that generates Vezér (`.vzr`) playlists for the Apotheneum. It
+orchestrates DAW playback, Chromatik playback, audio playback, waiting rooms, and the
+gaps between tracks.
 
 ## Why this exists
 
-Apotheneum shows used to be assembled by hand in the Vezér GUI. Every playlist position
-held its own copy of a composition, so putting one track in five positions meant making
-the same edit five times — the same project paths, the same OSC commands, the same fades,
-the same timing. Miss one and you get dead air or a DAW that never quits, in the middle of
-a run, with an audience in the room. Worse, the rig's hard-won quirks (Bitwig's transport
-not reliably resetting to zero) lived in the operator's memory rather than anywhere a
-second person could find them.
+When you build a playlist the way it was done before with Vezér, you have to manually set
+up the intro track duration. If you want the intro waiting room and then have a track in
+multiple positions, you have to edit that five times. This way, it's configured once.
 
-This tool makes `src/config.ts` the single declaration of the track library. A track is
-described **once**, as one of two typed variants:
-
-- `type: "daw"` — plays from a DAW, with `daw: "ableton" | "bitwig"`
-- `type: "vezer"` — a Vezér-native piece backed by extracted automation XML
-
-From that declaration plus a playlist order, the generator supplies the right OSC dialect,
-the DAW transport sequence, the project-open timing, the master-fader curve, the
-waiting-room audio, and the intro structure. **Placing a track in five positions now means
-selecting it five times, not rebuilding it five times.** Change a track's duration or
-project path in one place and every position it appears in is correct.
-
-The scope differs by variant, and the distinction matters: DAW tracks are generated
-completely from configuration. Vezér-native tracks keep their stored automation XML — the
-generator supplies the waiting-room intro around them and assembles the playlist, but does
-not author their timelines.
-
-A useful side effect: because a playlist is fully derived from config plus a few answers,
-it is **disposable**. When something is wrong you regenerate rather than repair.
+This can also generate a playlist from the command line. What it's really doing: you have
+a single configuration file which explains what each kind of track can be. You run a
+script, and it generates an entire Vezér playlist. It knows whether it's a Bitwig track or
+an Ableton track, and automatically adds the play, stop, and restart sections.
 
 ## How tracks are modeled
 
