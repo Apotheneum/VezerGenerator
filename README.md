@@ -46,7 +46,7 @@ Two type variants, but three execution modes — `daw` splits by which DAW it dr
 | **Project source** | `project` (`.als`) | `project` (`.bwproject`) | `composition` (XML) |
 | **Transport** | `/start`, `/stop` | `/play <1>`, `/play <0>`, plus a defensive reset burst | Owned by the stored XML |
 | **Duration** | `duration` (piece only; intro is added on top) | `duration` (piece only; intro is added on top) | Stored in the XML — the generator never knows it |
-| **Track LX project** | Opened by the generator from `lxProject` | Opened by the generator from `lxProject` | Opened by the XML; config `lxProject` is **ignored** |
+| **Track LX project** | Opened by the generator from `lxProject` | Opened by the generator from `lxProject` | Opened by the XML; there is no config field for it |
 | **DAW preflight** | None | Stop/restart burst 10s after open | None |
 
 Every generated intro — for all three modes — does the same four things: quits both DAWs
@@ -92,7 +92,6 @@ npx tsx src/cli.ts extract ./MyShow.vzr --output-dir ./compositions
 "My-Generative": {
   type: "vezer",
   composition: "./compositions/My-Generative.xml",
-  lxProject: "…",   // currently required by the type, but never read — see below
 },
 ```
 
@@ -256,28 +255,22 @@ the composition does that itself on its own timeline. The two halves have agreed
 responsibilities: the intro owns the waiting room, the composition owns everything from
 its own first frame.
 
-A Vezér track therefore does open LX projects — two of them — but neither comes from its
-`lxProject` field. Generating `MS-Generative` emits exactly these, and the configured
-`mcslee/Generative.lxp` appears nowhere in the output:
+A Vezér track therefore does open LX projects — two of them — and neither is named in
+`src/config.ts`. A `vezer` declaration carries only `type` and `composition`; there is no
+`lxProject` field, because the generator would have nothing to do with one.
+Generating `MS-Generative` emits exactly these:
 
 ```
 openProject <"Apotheneum/mcslee/WaitingRoom.BRC.lxp">   ← generated intro, frame 2
 openProject <"Apotheneum/mcslee/Ouroboros.BRC.lxp">     ← from the stored XML
 ```
 
-> ⚠️ **`lxProject` on a `vezer` track is currently required by the type but never read.**
-> `src/lib/intro.ts` only emits the `openProject` keyframe when `type === "daw"`. This is
-> schema debt, not intent — the field should be optional or removed. Until then, treat any
-> `lxProject` on a Vezér track as decorative, and don't trust it to tell you which
-> lighting project the piece loads. To find the truth, read it out of the XML:
->
-> ```bash
-> grep -o 'openProject &lt;[^<]*' compositions/MS-Generative.xml
-> ```
->
-> The values in config have already drifted from reality — at time of writing,
-> `MS-Generative` declares `mcslee/Generative.lxp` while its XML opens
-> `mcslee/Ouroboros.BRC.lxp`.
+To find out which lighting project a Vezér piece loads, read it out of the XML — that is
+the only place the answer exists:
+
+```bash
+grep -o 'openProject &lt;[^<]*' compositions/MS-Generative.xml
+```
 
 #### Worked example: `MS-Generative`
 
@@ -285,7 +278,6 @@ openProject <"Apotheneum/mcslee/Ouroboros.BRC.lxp">     ← from the stored XML
 "MS-Generative": {
   type: "vezer",
   composition: "./compositions/MS-Generative.xml",
-  lxProject: "Apotheneum/mcslee/Generative.lxp",  // never read — see warning above
 },
 ```
 
@@ -388,8 +380,6 @@ npx tsx src/test-generate.ts MS-Apotheosis
 
 ## Known issues
 
-- `lxProject` is required on `vezer` tracks but never read, and the configured values have
-  drifted from what the XML actually opens.
 - `oscPorts` / `audioDevice` in config are dead — `appData` comes from the `.vzr` template.
 - Track paths in `src/config.ts` are absolute and machine-specific
   (`/Users/apotheneum/...`); nothing validates that they exist before generating.

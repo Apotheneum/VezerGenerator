@@ -10,7 +10,6 @@ export interface DawTrackConfig {
 export interface VezerTrackConfig {
   type: "vezer";
   composition: string;
-  lxProject: string;
 }
 
 export type TrackConfig = DawTrackConfig | VezerTrackConfig;
