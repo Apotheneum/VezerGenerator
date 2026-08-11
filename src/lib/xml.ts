@@ -192,9 +192,17 @@ function buildAppData(config: Config): string {
 	</dict>`;
 }
 
+const APP_DATA_CONSEQUENCE =
+  "Without it the generated playlist would have NO OSC port configuration and no audio " +
+  "device — a failure that would only surface live, during playback.";
+
 /**
  * Build a complete .vzr file from composition XML blocks
- * Uses a template file (like blank.vzr) for appData if provided
+ *
+ * If a templatePath is supplied, the appData block (OSC ports, audio device, transport
+ * button state) is lifted out of that file. That template is load-bearing: if it cannot
+ * be read or its appData block cannot be parsed, this throws rather than silently
+ * emitting an empty appData dict.
  */
 export async function buildVzrFile(
   compositions: string[],
@@ -204,30 +212,49 @@ export async function buildVzrFile(
 
   if (templatePath) {
     // Extract appData from template file using proper nested dict parsing
-    const templateContent = await readFile(templatePath, "utf-8");
-    const appDataKeyMatch = templateContent.match(/<key>appData<\/key>/);
-    if (appDataKeyMatch) {
-      const keyEnd = appDataKeyMatch.index! + appDataKeyMatch[0].length;
-      const dictStart = templateContent.indexOf("<dict>", keyEnd);
-      if (dictStart !== -1) {
-        const dictEnd = findMatchingDictClose(templateContent, dictStart + 6);
-        appDataXml = templateContent.slice(dictStart, dictEnd);
-
-        // Enable loop at end of playlist and auto-play next composition
-        appDataXml = appDataXml.replace(
-          /(<key>queuedLoopButton<\/key>\s*<dict>[\s\S]*?<key>state<\/key>\s*)<(true|false)\/>/,
-          "$1<true/>"
-        );
-        appDataXml = appDataXml.replace(
-          /(<key>queuedModeButton<\/key>\s*<dict>[\s\S]*?<key>state<\/key>\s*)<(true|false)\/>/,
-          "$1<true/>"
-        );
-      } else {
-        appDataXml = "<dict/>";
-      }
-    } else {
-      appDataXml = "<dict/>";
+    let templateContent: string;
+    try {
+      templateContent = await readFile(templatePath, "utf-8");
+    } catch (err) {
+      throw new Error(
+        `Could not read the appData template "${templatePath}": ${
+          err instanceof Error ? err.message : String(err)
+        }. ${APP_DATA_CONSEQUENCE} Restore that file (it is checked into the repo) or ` +
+          `point the generator at a valid .vzr template.`
+      );
     }
+
+    const appDataKeyMatch = templateContent.match(/<key>appData<\/key>/);
+    if (!appDataKeyMatch) {
+      throw new Error(
+        `The appData template "${templatePath}" contains no <key>appData</key> block. ` +
+          `${APP_DATA_CONSEQUENCE} Use a .vzr file saved by Vezér that has OSC ports and ` +
+          `an audio device configured.`
+      );
+    }
+
+    const keyEnd = appDataKeyMatch.index! + appDataKeyMatch[0].length;
+    const dictStart = templateContent.indexOf("<dict>", keyEnd);
+    if (dictStart === -1) {
+      throw new Error(
+        `The appData block in template "${templatePath}" could not be parsed: no <dict> ` +
+          `follows <key>appData</key>. ${APP_DATA_CONSEQUENCE} The template is likely ` +
+          `truncated or corrupted.`
+      );
+    }
+
+    const dictEnd = findMatchingDictClose(templateContent, dictStart + 6);
+    appDataXml = templateContent.slice(dictStart, dictEnd);
+
+    // Enable loop at end of playlist and auto-play next composition
+    appDataXml = appDataXml.replace(
+      /(<key>queuedLoopButton<\/key>\s*<dict>[\s\S]*?<key>state<\/key>\s*)<(true|false)\/>/,
+      "$1<true/>"
+    );
+    appDataXml = appDataXml.replace(
+      /(<key>queuedModeButton<\/key>\s*<dict>[\s\S]*?<key>state<\/key>\s*)<(true|false)\/>/,
+      "$1<true/>"
+    );
   } else {
     appDataXml = "<dict/>";
   }
