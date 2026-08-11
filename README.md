@@ -40,7 +40,7 @@ fades the master in at the start and out at the end.
 pnpm install
 
 # Generate a playlist interactively
-npx tsx src/cli.ts generate -o my-playlist.vzr
+pnpm generate -o my-playlist.vzr
 ```
 
 You get a numbered track list; enter an order like `1,2,1,3` (repeats are fine and cost
@@ -66,7 +66,7 @@ no XML to produce.
 out and reference the extracted file:
 
 ```bash
-npx tsx src/cli.ts extract ./MyShow.vzr --output-dir ./compositions
+pnpm extract ./MyShow.vzr --output-dir ./compositions
 ```
 
 ```typescript
@@ -82,7 +82,7 @@ npx tsx src/cli.ts extract ./MyShow.vzr --output-dir ./compositions
 ### `generate` — build a playlist
 
 ```bash
-npx tsx src/cli.ts generate [--output playlist.vzr]
+pnpm generate [-o playlist.vzr]
 ```
 
 Prints the numbered track list, takes one comma-separated order (repeats allowed), asks
@@ -92,7 +92,7 @@ queued-advance enabled, so the show runs unattended and loops.
 ### `extract` — pull compositions out of a `.vzr`
 
 ```bash
-npx tsx src/cli.ts extract <input.vzr> [--output-dir ./compositions]
+pnpm extract <input.vzr> [--output-dir ./compositions]
 ```
 
 Use this for Vezér-native pieces whose automation can't be generated.
@@ -100,7 +100,7 @@ Use this for Vezér-native pieces whose automation can't be generated.
 ### `manage` — inspect the library
 
 ```bash
-npx tsx src/cli.ts manage
+pnpm manage
 ```
 
 Lists configured tracks and the composition files in `./compositions/`, marking which
@@ -130,22 +130,24 @@ Note that `openProjectAhead` counts backward from the **end of the intro**, not 
 playback — playback starts 4 seconds later, so the DAW actually gets
 `openProjectAhead + 4s` of loading time.
 
-Two worked examples, both with a 120s intro. Each covers the intro and the first seconds
-of the piece — the piece then continues uninterrupted to the end of the composition.
+Two worked examples, both with a 120s intro. Each is windowed on the last 30 seconds of
+the intro and the first seconds of the piece — that is where everything happens. The
+waiting room simply runs from 0:00 to that point, and the piece continues to the end of
+the composition.
 
 **Ableton** — `MS-Apotheosis` (`duration: 2530`). No preflight: the project is opened and
 left alone until play.
 
 ```mermaid
 gantt
-    title Ableton track - intro and handoff (piece continues to 44:10)
+    title Ableton track - final 30s of the intro through the handoff
     dateFormat HH:mm:ss
     axisFormat %M:%S
     section Audio
-    Waiting-room audio     :done, a1, 00:00:00, 00:02:00
+    Waiting-room audio ends :done, a1, 00:01:30, 00:02:00
     Piece plays            :active, a2, 00:02:04, 00:02:30
     section Chromatik (LX)
-    WaitingRoom.BRC.lxp    :done, c1, 00:00:02, 00:02:00
+    WaitingRoom.BRC.lxp    :done, c1, 00:01:30, 00:02:00
     Open track LX          :milestone, c2, 00:02:01, 0s
     Apotheosis.BRC.lxp     :active, c3, 00:02:01, 00:02:30
     section Ableton
@@ -154,8 +156,7 @@ gantt
     Start                  :milestone, b3, 00:02:04, 0s
     Playing                :active, b4, 00:02:04, 00:02:30
     section Master fader
-    Fade in                :m1, 00:00:00, 00:00:05
-    Full - intro           :done, m2, 00:00:05, 00:01:55
+    Full - intro           :done, m2, 00:01:30, 00:01:55
     Fade out               :m3, 00:01:55, 00:02:00
     Silent across the seam :crit, m4, 00:02:00, 00:02:04
     Full - piece           :done, m5, 00:02:04, 00:02:30
@@ -166,14 +167,14 @@ burst 10s after the project opens.
 
 ```mermaid
 gantt
-    title Bitwig track - intro and handoff (piece continues to 22:00)
+    title Bitwig track - final 30s of the intro through the handoff
     dateFormat HH:mm:ss
     axisFormat %M:%S
     section Audio
-    Waiting-room audio       :done, a1, 00:00:00, 00:02:00
+    Waiting-room audio ends  :done, a1, 00:01:30, 00:02:00
     Piece plays              :active, a2, 00:02:04, 00:02:30
     section Chromatik (LX)
-    WaitingRoom.BRC.lxp      :done, c1, 00:00:02, 00:02:00
+    WaitingRoom.BRC.lxp      :done, c1, 00:01:30, 00:02:00
     Open track LX            :milestone, c2, 00:02:01, 0s
     Treetop Transmission.lxp :active, c3, 00:02:01, 00:02:30
     section Bitwig
@@ -184,8 +185,7 @@ gantt
     Play                     :milestone, b5, 00:02:04, 0s
     Playing                  :active, b6, 00:02:04, 00:02:30
     section Master fader
-    Fade in                  :m1, 00:00:00, 00:00:05
-    Full - intro             :done, m2, 00:00:05, 00:01:55
+    Full - intro             :done, m2, 00:01:30, 00:01:55
     Fade out                 :m3, 00:01:55, 00:02:00
     Silent across the seam   :crit, m4, 00:02:00, 00:02:04
     Full - piece             :done, m5, 00:02:04, 00:02:30
@@ -213,18 +213,17 @@ the playlist, and the generator only authors the first one:
 
 ```mermaid
 gantt
-    title Vezer-native track - two separate playlist entries
+    title Vezer-native track - the two entries meeting at 2:00
     dateFormat HH:mm:ss
     axisFormat %M:%S
     section Intro (generated)
-    Waiting-room audio    :done, i1, 00:00:00, 00:02:00
-    WaitingRoom.BRC.lxp   :done, i2, 00:00:02, 00:02:00
-    Master fade in        :i3, 00:00:00, 00:00:05
-    Master fade out       :i4, 00:01:55, 00:02:00
+    Waiting-room audio ends :done, i1, 00:01:30, 00:02:00
+    WaitingRoom.BRC.lxp     :done, i2, 00:01:30, 00:02:00
+    Master fade out         :i4, 00:01:55, 00:02:00
     section Piece (from XML)
-    Ouroborus Mix 48k.wav :active, v1, 00:02:00, 00:10:00
-    Ouroboros.BRC.lxp     :active, v2, 00:02:00, 00:10:00
-    Own automation tracks :active, v3, 00:02:00, 00:10:00
+    Ouroborus Mix 48k.wav   :active, v1, 00:02:00, 00:02:45
+    Ouroboros.BRC.lxp       :active, v2, 00:02:00, 00:02:45
+    Own automation tracks   :active, v3, 00:02:00, 00:02:45
 ```
 
 The second bar's length comes from the XML, not from config — the generator never knows
@@ -363,8 +362,8 @@ effect on output today.
 ### Testing individual tracks
 
 ```bash
-npx tsx src/test-generate.ts DO-Treetop
-npx tsx src/test-generate.ts MS-Apotheosis
+pnpm test DO-Treetop
+pnpm test MS-Apotheosis
 ```
 
 ## Known issues
