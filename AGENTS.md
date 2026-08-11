@@ -37,8 +37,9 @@ These have all bitten someone already.
   deduplicate, or "clean up" that block without testing on the actual rig.
 - **`./TestTreetopOnly.vzr` is load-bearing.** It is a 1.8 MB checked-in file that
   `generate` reads to source the playlist's `appData` block (OSC ports, audio device,
-  transport buttons). It is not a leftover test fixture. Deleting or moving it silently
-  produces playlists with no OSC configuration.
+  transport buttons). It is not a leftover test fixture. Deleting or moving it no longer
+  fails silently — `buildVzrFile()` throws an error naming the file and `generate` exits
+  non-zero — but the file is still required for `generate` to work at all.
 - **Timing constants are frame-based and interdependent.** `fps` is 30; durations in
   config are seconds and get multiplied. Changing one offset in `daw-track.ts` can
   reorder events relative to another. Read the whole timeline before touching one row.

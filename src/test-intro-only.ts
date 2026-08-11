@@ -30,9 +30,9 @@ async function main() {
 
   const compositions = [introXml];
 
-  // Build and write (use blank.vzr as template for appData)
+  // Build and write (use TestTreetopOnly.vzr as template for appData - has proper OSC ports)
   console.log(chalk.gray("  Building .vzr file with template appData..."));
-  const vzrContent = await buildVzrFile(compositions, "./blank.vzr");
+  const vzrContent = await buildVzrFile(compositions, "./TestTreetopOnly.vzr");
   const outputFile = "test-intro-only.vzr";
   await writeXmlFile(outputFile, vzrContent);
 

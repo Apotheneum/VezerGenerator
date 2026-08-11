@@ -343,8 +343,12 @@ ApothVezerGenerator/
 `generate` does not synthesize the playlist's `appData` block (OSC port definitions, audio
 device, transport button state). It **copies it out of `./TestTreetopOnly.vzr`**, hardcoded
 at `src/commands/generate.ts`, then force-enables queued-loop and queued-advance. Keep that
-file in the repo — if it goes missing or moves, generated playlists lose their OSC and
-audio settings.
+file in the repo — it is load-bearing.
+
+If the template is missing, moved, or its `appData` block can't be parsed, `buildVzrFile()`
+now **throws** and the CLI exits non-zero, naming the file in the error. It no longer falls
+back to an empty `appData` dict, which used to produce a playlist with no OSC or audio
+configuration — a failure that would only surface live, during playback.
 
 A consequence worth knowing: `oscPorts` and `audioDevice` in `src/config.ts` are currently
 **not used**. `buildAppData()` in `src/lib/xml.ts` would build that block from them, but
