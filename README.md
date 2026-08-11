@@ -171,6 +171,15 @@ the composition does that itself on its own timeline. The two halves have agreed
 responsibilities: the intro owns the waiting room, the composition owns everything from
 its own first frame.
 
+A Vezér track therefore does open LX projects — two of them — but neither comes from its
+`lxProject` field. Generating `MS-Generative` emits exactly these, and the configured
+`mcslee/Generative.lxp` appears nowhere in the output:
+
+```
+openProject <"Apotheneum/mcslee/WaitingRoom.BRC.lxp">   ← generated intro, frame 2
+openProject <"Apotheneum/mcslee/Ouroboros.BRC.lxp">     ← from the stored XML
+```
+
 > ⚠️ **`lxProject` on a `vezer` track is currently required by the type but never read.**
 > `src/lib/intro.ts` only emits the `openProject` keyframe when `type === "daw"`. This is
 > schema debt, not intent — the field should be optional or removed. Until then, treat any
@@ -233,9 +242,10 @@ if every clip is longer than the intro, it falls back to the shortest one
 (`selectWaitingRoomAudio` in `src/lib/config.ts`). It does not trim or loop audio, so an
 intro length far from any configured clip will leave silence.
 
-**Intro duration is per-playlist, not per-track.** `generate` asks once and applies the
-answer to every track in the run. Different intro lengths within one show aren't
-expressible today.
+**Intro duration is global per playlist, by design.** `generate` asks once and applies the
+answer to every track in the run; `defaultIntroDuration` is only the prompt's default. A
+show gets one consistent intro length rather than per-track overrides — if you need a
+different length, generate a different playlist.
 
 ## OSC reference
 
@@ -296,6 +306,5 @@ npx tsx src/test-generate.ts MS-Apotheosis
 - `lxProject` is required on `vezer` tracks but never read, and the configured values have
   drifted from what the XML actually opens.
 - `oscPorts` / `audioDevice` in config are dead — `appData` comes from the `.vzr` template.
-- Intro duration is global per playlist; no per-track override.
 - Track paths in `src/config.ts` are absolute and machine-specific
   (`/Users/apotheneum/...`); nothing validates that they exist before generating.
