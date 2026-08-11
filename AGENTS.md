@@ -35,8 +35,7 @@ These have all bitten someone already.
   sequence of stops bracketing a `/restart` at specific frame offsets. It looks like
   copy-paste noise. It is a workaround for real hardware behavior. Do not collapse,
   deduplicate, or "clean up" that block without testing on the actual rig.
-- **`./TestTreetopOnly.vzr` is load-bearing.** It is a 1.8 MB checked-in file that
-  `generate` reads to source the playlist's `appData` block (OSC ports, audio device,
+- **`./TestTreetopOnly.vzr` is load-bearing.** It is a checked-in file that `generate` reads to source the playlist's `appData` block (OSC ports, audio device,
   transport buttons). It is not a leftover test fixture. Deleting or moving it no longer
   fails silently — `buildVzrFile()` throws an error naming the file and `generate` exits
   non-zero — but the file is still required for `generate` to work at all.
@@ -59,25 +58,17 @@ each is a decision, not an oversight to fix silently:
 
 ## Verifying claims
 
-Nothing here is covered by tests, so verify against the artifacts directly rather than
-reasoning from the config:
-
-```bash
-# What LX project / OSC commands does a stored composition actually send?
-grep -o '/apotheneum/[^<"]*' compositions/<name>.xml | sort | uniq -c
-
-# Generate a single track without the interactive prompts
-pnpm test DO-Treetop
-```
-
-When you state what a track does, say whether you read it from config or from the XML —
-they disagree in known places.
+Nothing here is covered by unit tests, so verify against the artifacts rather than
+reasoning from the config — `pnpm test <TrackName>` generates one track without the
+interactive prompts, and the composition XML is the authority on what a Vezér track does.
+When you state what a track does, say which of the two you read it from.
 
 ## Documentation
 
-`README.md` is the authoritative operational doc. If you change generator behavior, update
-it in the same change — it previously drifted badly from the code (a duplicate manual in
-`CLAUDE.md` grew contradictions), which is why there is now exactly one.
+**The split: `README.md` is for the operator, this file is for whoever changes the code.**
+A fact lives in exactly one of them and the other cross-references it — a duplicate manual
+in `CLAUDE.md` grew contradictions once already. If you change generator behavior, update
+the README in the same change.
 
 When you document something you haven't verified on the real rig, mark it as unverified
 rather than stating it plainly.

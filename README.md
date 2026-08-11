@@ -24,8 +24,6 @@ Two type variants, but three execution modes — `daw` splits by which DAW it dr
 | **Declaration** | `type: "daw"`, `daw: "ableton"` | `type: "daw"`, `daw: "bitwig"` | `type: "vezer"` |
 | **Main timeline** | Generated from config | Generated from config | Loaded from stored XML |
 | **Playlist entries per selection** | One: intro + piece merged | One: intro + piece merged | Two: generated intro, then stored piece |
-| **Project source** | `project` (`.als`) | `project` (`.bwproject`) | `composition` (XML) |
-| **Transport** | `/start`, `/stop` | `/play <1>`, `/play <0>`, plus a defensive reset burst | Owned by the stored XML |
 | **Duration** | `duration` (piece only; intro is added on top) | `duration` (piece only; intro is added on top) | Stored in the XML — the generator never knows it |
 | **Track LX project** | Opened by the generator from `lxProject` | Opened by the generator from `lxProject` | Opened by the XML; there is no config field for it |
 | **DAW preflight** | None | Stop/restart burst 10s after open | None |
@@ -194,15 +192,11 @@ Note the deliberate 4-second silence across the seam: the master is faded to zer
 end of the intro and only returns once the DAW is actually playing, so a slow-loading LX
 project never shows as a half-lit stutter.
 
-The two DAW dialects are not interchangeable:
-
-- **Ableton** — `/start` / `/stop` on the `Ableton Out` port; `openLiveProject`,
-  `quitLive`.
-- **Bitwig** — `/play <1>` / `/play <0>` on the `Bitwig` port; `openBitwigProject`,
-  `quitBitwig`. Bitwig's transport does not reliably reset to zero on a single command, so
-  the generator emits a burst of `/play <0>` messages bracketing a `/restart` at specific
-  frame offsets (`src/lib/daw-track.ts`). **This is deliberate — don't "simplify" it
-  without testing on the real rig.**
+The two dialects are not interchangeable (see the OSC reference below). Bitwig's transport
+does not reliably reset to zero on a single command, so the generator emits a burst of
+`/play <0>` messages bracketing a `/restart` at specific frame offsets
+(`src/lib/daw-track.ts`). **This is deliberate — don't "simplify" it without testing on the
+real rig.**
 
 ### Vezér tracks, and what the XML owns
 
@@ -231,17 +225,10 @@ composition: `grep -A1 '<key>compTime</key>' compositions/MS-Generative.xml` giv
 i.e. 2h19m. You need this to work out a show's total runtime, since `manage` and
 `generate` can't tell you. No DAW appears in either half, because no DAW is involved.
 
-The stored composition owns far more than its visuals — **it owns its own LX project,
-audio, transport, duration, and automation.** The generated intro therefore only opens the
-waiting room and deliberately does *not* switch to the track's lighting project, because
-the composition does that itself on its own timeline. The two halves have agreed
-responsibilities: the intro owns the waiting room, the composition owns everything from
-its own first frame.
-
-A Vezér track therefore does open LX projects — two of them — and neither is named in
-`src/config.ts`. A `vezer` declaration carries only `type` and `composition`; there is no
-`lxProject` field, because the generator would have nothing to do with one.
-Generating `MS-Generative` emits exactly these:
+The stored composition owns its own LX project, audio, transport, duration, and
+automation. The intro owns only the waiting room. So a Vezér track does open LX projects —
+two of them — and neither is named in `src/config.ts`: a `vezer` declaration carries only
+`type` and `composition`. Generating `MS-Generative` emits exactly these:
 
 ```
 openProject <"Apotheneum/mcslee/WaitingRoom.BRC.lxp">   ← generated intro, frame 2
@@ -254,28 +241,6 @@ the only place the answer exists:
 ```bash
 grep -o 'openProject &lt;[^<]*' compositions/MS-Generative.xml
 ```
-
-#### Worked example: `MS-Generative`
-
-```typescript
-"MS-Generative": {
-  type: "vezer",
-  composition: "./compositions/MS-Generative.xml",
-},
-```
-
-Selecting it produces two consecutive playlist entries:
-
-1. **`Intro-MS-Generative`** — generated fresh on every run. Quits both DAWs, opens
-   `WaitingRoom.BRC.lxp`, plays the waiting-room clip chosen for your intro length, fades
-   the master in and back out. No DAW project is opened, because no DAW is involved.
-2. **`MS-Generative`** — loaded from `compositions/MS-Generative.xml` and inserted into
-   the playlist. Internally it opens `Apotheneum/mcslee/Ouroboros.BRC.lxp`, plays
-   `Mark Slee - Ouroborus Mix 48k.wav`, and runs its own automation tracks. Its duration
-   lives in the XML, so the generator neither knows nor needs it.
-
-Changing the lighting project for a Vezér track therefore means editing the XML — or
-re-authoring in Vezér and re-running `extract` — not editing `src/config.ts`.
 
 ## Configuration
 
@@ -307,6 +272,26 @@ answer to every track in the run; `defaultIntroDuration` is only the prompt's de
 show gets one consistent intro length rather than per-track overrides — if you need a
 different length, generate a different playlist.
 
+### Path conventions
+
+`src/config.ts` mixes three rooted path styles. They look inconsistent because they are
+resolved by three different things:
+
+| Field | Resolved by | Style |
+|---|---|---|
+| `lxProject`, `waitingRoomLxProject`, `project` | **The receiving app**, not this tool — the value is passed verbatim as an OSC argument to Chromatik or the DAW opener | `Apotheneum/mcslee/WaitingRoom.BRC.lxp`, `Bitwig/Projects/Apotheneum/X.bwproject` |
+| `composition` | **This tool**, relative to the working directory — `generate` opens it with `readFile` | `./compositions/X.xml` |
+| `waitingRoomAudios[].path` | **Vezér**, at playback — embedded verbatim into the composition as `soundURL` | absolute (`/Users/apotheneum/...`) |
+
+The practical consequence: only `composition` fails at generation time if it's wrong. A bad
+`lxProject` or `project` generates a perfectly valid `.vzr` and fails silently on the rig,
+and a bad audio path fails when Vezér opens the file. Nothing validates any of them.
+
+> What the app-resolved paths are relative to on the show machine is **unverified here** —
+> it's rig-side configuration, not something this repo controls. Copy the style of an
+> existing entry rather than guessing.
+
+
 ## OSC reference
 
 | Target | Command | Port |
@@ -322,24 +307,9 @@ different length, generate a different playlist.
 
 ## Development
 
-```
-ApothVezerGenerator/
-├── src/
-│   ├── cli.ts                      # CLI entry point
-│   ├── config.ts                   # Track configuration (edit this!)
-│   ├── commands/
-│   │   ├── extract.ts              # Extract compositions from .vzr
-│   │   ├── manage.ts               # List tracks / delete composition files
-│   │   └── generate.ts             # Build playlist
-│   └── lib/
-│       ├── config.ts               # Config types and helpers
-│       ├── xml.ts                  # plist parsing / .vzr assembly
-│       ├── intro.ts                # Generate intro compositions
-│       ├── daw-track.ts            # Generate DAW track compositions
-│       └── composition-builder.ts  # Low-level composition XML builder
-├── compositions/                   # Stored Vezér-native track XMLs
-└── TestTreetopOnly.vzr             # appData template — see below
-```
+`src/cli.ts` is the entry point and `src/config.ts` is the file you edit. The generators
+live in `src/lib/` — `intro.ts` and `daw-track.ts` build compositions on top of
+`composition-builder.ts`, and `xml.ts` handles plist parsing and `.vzr` assembly.
 
 ### The `appData` template
 
@@ -358,15 +328,34 @@ A consequence worth knowing: `oscPorts` and `audioDevice` in `src/config.ts` are
 nothing calls it while a template path is supplied. Editing those config values has no
 effect on output today.
 
+### Checking a playlist before a show
+
+The generated file is plain XML, so it can be verified without opening Vezér:
+
+```bash
+# How many compositions? (DAW tracks = 1 each, Vezér tracks = 2 each)
+grep -c '<key>Comp-' playlist.vzr
+
+# Every project switch, in playlist order — the fastest way to spot a wrong or missing one
+grep -o 'openProject &lt;[^<]*' playlist.vzr
+
+# The appData block must be present, or there is no OSC configuration at all
+grep -c '<key>appData</key>' playlist.vzr
+
+# Unattended playback: both must be <true/>
+for k in queuedLoopButton queuedModeButton; do
+  printf "%s " $k
+  grep -A8 "$k" playlist.vzr | grep -A1 '<key>state</key>' | tail -1
+done
+```
+
+Escaping differs between halves — a generated intro writes `&quot;` where a stored
+composition writes a literal `"` — so match on `openProject` rather than on the quotes.
+
+
 ### Testing individual tracks
 
 ```bash
 pnpm test DO-Treetop
 pnpm test MS-Apotheosis
 ```
-
-## Known issues
-
-- `oscPorts` / `audioDevice` in config are dead — `appData` comes from the `.vzr` template.
-- Track paths in `src/config.ts` are absolute and machine-specific
-  (`/Users/apotheneum/...`); nothing validates that they exist before generating.
