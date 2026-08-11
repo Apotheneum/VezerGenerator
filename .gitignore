@@ -2,3 +2,6 @@ node_modules/
 test-*.vzr
 blank.vzr
 *.log
+
+# agent worktrees
+.claude/worktrees/
