@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      # The rig is not available in CI, so we cannot test that a playlist drives
+      # hardware correctly. What we CAN test is that generation still produces a
+      # structurally sound .vzr for each track type — which is what silently broke
+      # in the past.
+
+      - name: Generate a DAW track (Bitwig)
+        run: |
+          pnpm test DO-Treetop
+          grep -q 'openBitwigProject' test-do-treetop.vzr
+          grep -q 'Treetop Transmission.lxp' test-do-treetop.vzr
+          grep -q 'WaitingRoom' test-do-treetop.vzr
+
+      - name: Generate a DAW track (Ableton)
+        run: |
+          pnpm test MS-Apotheosis
+          grep -q 'openLiveProject' test-ms-apotheosis.vzr
+          # Ableton gets /start, never Bitwig's /play — a swapped dialect is silent on the rig
+          grep -q '/start' test-ms-apotheosis.vzr
+          if grep -q '/restart' test-ms-apotheosis.vzr; then
+            echo "Ableton track emitted Bitwig's /restart"; exit 1
+          fi
+
+      - name: Generate a Vezér track
+        run: |
+          pnpm test MS-Generative
+          # The stored XML owns the LX project; the intro owns the waiting room
+          grep -q 'Ouroboros.BRC.lxp' test-ms-generative.vzr
+          grep -q 'WaitingRoom.BRC.lxp' test-ms-generative.vzr
+
+      - name: Every generated playlist carries an appData block
+        run: grep -q '<key>appData</key>' test-do-treetop.vzr
+
+      - name: A missing appData template must fail loudly, not silently
+        run: |
+          mv TestTreetopOnly.vzr /tmp/template.vzr
+          if pnpm test DO-Treetop; then
+            echo "FAIL: generation succeeded without the appData template"
+            exit 1
+          fi
+          mv /tmp/template.vzr TestTreetopOnly.vzr
+
+      - name: Intro-only script runs from a clean checkout
+        run: pnpm exec tsx src/test-intro-only.ts

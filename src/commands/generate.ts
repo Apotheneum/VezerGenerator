@@ -49,7 +49,7 @@ export async function generateCommand(
         if (nums.length === 0 || nums.some(isNaN)) {
           return "Please enter valid numbers.";
         }
-        if (nums.some((n) => n < 1 || n > choices.length)) {
+        if (nums.some((n: number) => n < 1 || n > choices.length)) {
           return `Please enter numbers between 1 and ${choices.length}.`;
         }
         return true;
