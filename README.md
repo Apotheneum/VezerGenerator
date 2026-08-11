@@ -149,6 +149,71 @@ Note that `openProjectAhead` counts backward from the **end of the intro**, not 
 playback — playback starts 4 seconds later, so the DAW actually gets
 `openProjectAhead + 4s` of loading time.
 
+Two worked examples, both with a 120s intro. Each covers the intro and the first seconds
+of the piece — the piece then continues uninterrupted to the end of the composition.
+
+**Ableton** — `MS-Apotheosis` (`duration: 2530`). No preflight: the project is opened and
+left alone until play.
+
+```mermaid
+gantt
+    title Ableton track - intro and handoff (piece continues to 44:10)
+    dateFormat HH:mm:ss
+    axisFormat %M:%S
+    section Audio
+    Waiting-room audio     :done, a1, 00:00:00, 00:02:00
+    Piece plays            :active, a2, 00:02:04, 00:02:30
+    section Chromatik (LX)
+    WaitingRoom.BRC.lxp    :done, c1, 00:00:02, 00:02:00
+    Open track LX          :milestone, c2, 00:02:01, 0s
+    Apotheosis.BRC.lxp     :active, c3, 00:02:01, 00:02:30
+    section Ableton
+    Open project           :milestone, b1, 00:01:40, 0s
+    Loading                :crit, b2, 00:01:40, 00:02:04
+    Start                  :milestone, b3, 00:02:04, 0s
+    Playing                :active, b4, 00:02:04, 00:02:30
+    section Master fader
+    Fade in                :m1, 00:00:00, 00:00:05
+    Full - intro           :done, m2, 00:00:05, 00:01:55
+    Fade out               :m3, 00:01:55, 00:02:00
+    Silent across the seam :crit, m4, 00:02:00, 00:02:04
+    Full - piece           :done, m5, 00:02:04, 00:02:30
+```
+
+**Bitwig** — `DO-Treetop` (`duration: 1200`). Identical shape plus the defensive reset
+burst 10s after the project opens.
+
+```mermaid
+gantt
+    title Bitwig track - intro and handoff (piece continues to 22:00)
+    dateFormat HH:mm:ss
+    axisFormat %M:%S
+    section Audio
+    Waiting-room audio       :done, a1, 00:00:00, 00:02:00
+    Piece plays              :active, a2, 00:02:04, 00:02:30
+    section Chromatik (LX)
+    WaitingRoom.BRC.lxp      :done, c1, 00:00:02, 00:02:00
+    Open track LX            :milestone, c2, 00:02:01, 0s
+    Treetop Transmission.lxp :active, c3, 00:02:01, 00:02:30
+    section Bitwig
+    Open project             :milestone, b1, 00:01:40, 0s
+    Loading                  :crit, b2, 00:01:40, 00:01:50
+    Preflight burst          :crit, b3, 00:01:50, 00:01:52
+    Loaded and stopped       :b4, 00:01:52, 00:02:04
+    Play                     :milestone, b5, 00:02:04, 0s
+    Playing                  :active, b6, 00:02:04, 00:02:30
+    section Master fader
+    Fade in                  :m1, 00:00:00, 00:00:05
+    Full - intro             :done, m2, 00:00:05, 00:01:55
+    Fade out                 :m3, 00:01:55, 00:02:00
+    Silent across the seam   :crit, m4, 00:02:00, 00:02:04
+    Full - piece             :done, m5, 00:02:04, 00:02:30
+```
+
+Note the deliberate 4-second silence across the seam: the master is faded to zero at the
+end of the intro and only returns once the DAW is actually playing, so a slow-loading LX
+project never shows as a half-lit stutter.
+
 The two DAW dialects are not interchangeable:
 
 - **Ableton** — `/start` / `/stop` on the `Ableton Out` port; `openLiveProject`,
@@ -162,7 +227,27 @@ The two DAW dialects are not interchangeable:
 ### Vezér tracks, and what the XML owns
 
 A Vezér selection produces two playlist entries: a generated intro, then the stored
-composition inserted as-is.
+composition inserted as-is. Unlike a DAW track, these are **two separate compositions** in
+the playlist, and the generator only authors the first one:
+
+```mermaid
+gantt
+    title Vezer-native track - two separate playlist entries
+    dateFormat HH:mm:ss
+    axisFormat %M:%S
+    section Intro (generated)
+    Waiting-room audio    :done, i1, 00:00:00, 00:02:00
+    WaitingRoom.BRC.lxp   :done, i2, 00:00:02, 00:02:00
+    Master fade in        :i3, 00:00:00, 00:00:05
+    Master fade out       :i4, 00:01:55, 00:02:00
+    section Piece (from XML)
+    Ouroborus Mix 48k.wav :active, v1, 00:02:00, 00:10:00
+    Ouroboros.BRC.lxp     :active, v2, 00:02:00, 00:10:00
+    Own automation tracks :active, v3, 00:02:00, 00:10:00
+```
+
+The second bar's length comes from the XML, not from config — the generator never knows
+it. No DAW appears in either half, because no DAW is involved.
 
 The stored composition owns far more than its visuals — **it owns its own LX project,
 audio, transport, duration, and automation.** The generated intro therefore only opens the
